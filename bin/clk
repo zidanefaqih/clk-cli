@@ -56,7 +56,7 @@ SEARCH_HOME = {
 DEFAULT_URL = SEARCH_HOME["google"]
 DEFAULT_SEARCH = "google"
 
-# Search engine yang bisa dipilih (default build-nya "nosearch" = nggak bisa nyari)
+# Search engines the user can pick (default build is "nosearch" = omnibox cannot search)
 SEARCH_ENGINES = {
     "google":     ("Google", "google.com",
                    "https://www.google.com/search?q={searchTerms}",
@@ -82,7 +82,7 @@ SEARCH_ENGINES = {
 
 DEFAULT_LOCALE = "en-US"
 
-# Pilihan manual, ngikutin batas yang dipakai Dolphin (biar nggak bikin spek aneh).
+# Manual choices, following Dolphin limits (avoid impossible specs).
 CORE_CHOICES = ["2", "4", "6", "8", "12", "16"]
 MEM_CHOICES = ["4", "8", "16"]
 SCREEN_CHOICES = ["1366x768", "1440x900", "1536x864", "1920x1080", "2560x1440", "3840x2160"]
@@ -90,10 +90,10 @@ GPU_CHOICES = ["NVIDIA", "Intel"]
 
 
 def _load_gpus():
-    """Katalog GPU.
+    """GPU catalog.
 
-    Sumber: gpus.json (hasil panen runtime dari binary = pool asli engine) +
-    gpus-extra.json (kartu lama/low-end yang nggak ada di pool engine).
+    Source: gpus.json (harvested from the binary = engine pool) +
+    gpus-extra.json (older/low-end cards missing from the engine pool).
     """
     out = {}
     for fname in ("gpus.json", "gpus-extra.json"):
@@ -112,7 +112,7 @@ def _load_gpus():
                     out[k].append(item)
     return out or _GPU_FALLBACK
 
-# --- katalog GPU (string ANGLE asli Windows/D3D11) ---
+# --- GPU catalog (real Windows/D3D11 ANGLE strings) ---
 # format yang diterima --fingerprint-gpu-renderer, persis seperti yang dilaporkan Chrome Windows
 _GPU_FALLBACK = {
     "NVIDIA": [
@@ -157,7 +157,7 @@ def gpu_model_choices(vendor):
 
 
 def resolve_gpu_model(text, vendor=None):
-    """Cari string renderer penuh dari potongan nama ('RTX 3080' -> string ANGLE)."""
+    """Resolve full ANGLE renderer from a substring ('RTX 3080' -> ANGLE string)."""
     if not text:
         return None
     if text.startswith("ANGLE"):
@@ -195,7 +195,7 @@ def gpu_tier(renderer):
 
 
 def coherence_warning(meta):
-    """Peringatan kalau spek nggak nyambung (mis. GPU desktop tapi RAM 8 GB)."""
+    """Warn when the spec is incoherent (e.g. desktop GPU + 8 GB RAM)."""
     if meta.get("search"):
         apply_search_engine(profile, meta["search"])
 
@@ -204,15 +204,15 @@ def coherence_warning(meta):
     mem = hw.get("mem")
     cores = hw.get("cores")
     if tier == "desktop" and mem and int(mem) < 16:
-        return f"GPU desktop tapi RAM {mem} GB — kebanyakan mesin begitu pakai 16 GB+"
+        return f"Desktop GPU with {mem} GB RAM — most such machines run 16 GB+"
     if tier == "desktop" and cores and int(cores) < 8:
-        return f"GPU desktop tapi cuma {cores} core — kurang nyambung"
+        return f"Desktop GPU with only {cores} cores — incoherent"
     if tier == "laptop" and mem and int(mem) > 16:
-        return f"GPU laptop dengan RAM {mem} GB — jarang, tapi ada"
+        return f"Laptop GPU with {mem} GB RAM — rare, but it exists"
     if hw.get("gpu_renderer") in LEGACY_RENDERERS:
         if (cores and int(cores) > 8) or (mem and int(mem) > 16):
-            return (f"{short_gpu(hw['gpu_renderer'])} itu kartu lama — "
-                    f"{cores or '?'} core / {mem or '?'} GB kelihatan nggak nyambung")
+            return (f"{short_gpu(hw['gpu_renderer'])} is an old card — "
+                    f"{cores or '?'} cores / {mem or '?'} GB looks incoherent")
     return None
 
 
@@ -235,7 +235,8 @@ SELF = pathlib.Path(__file__).resolve()
 
 # --- font isolation ---------------------------------------------------------
 # Windows fonts live in ~/cloak/winfonts, seen only by this process tree.
-if FONTS_CONF.exists():
+# fontconfig is a Linux thing; skip on Windows (Chromium uses DirectWrite there).
+if os.name != "nt" and FONTS_CONF.exists():
     os.environ.setdefault("FONTCONFIG_FILE", str(FONTS_CONF))
 
 if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
@@ -266,7 +267,7 @@ def port_open(p):
 
 
 def load_proxy_store():
-    """Proxy belian/manual dari ~/cloak/proxies.json.
+    """Purchased/manual proxies from ~/cloak/proxies.json.
 
     Format:
       {
@@ -296,7 +297,7 @@ def save_proxy_store(data):
 
 
 def parse_proxy_text(text):
-    """Terima URL atau host:port:user:pass (format Webshare)."""
+    """Accept a URL or host:port:user:pass (Webshare dashboard format)."""
     from urllib.parse import urlparse, unquote
     text = (text or "").strip()
     if not text:
@@ -333,7 +334,7 @@ def parse_proxy_text(text):
 
 
 def strip_creds(proxy):
-    """URL tanpa user:pass — buat --proxy-server (Chromium nggak selalu nurut userinfo)."""
+    """URL without user:pass — for --proxy-server (Chromium often ignores userinfo)."""
     from urllib.parse import urlparse, urlunparse
     if not proxy:
         return proxy
@@ -364,7 +365,7 @@ def is_local_socks(proxy):
 
 
 def discover_proxies():
-    """Gabungan wireproxy lokal + proxy belian dari proxies.json.
+    """Merge local wireproxy + purchased proxies from proxies.json.
 
     return: {label: {port|None, url|None, desc, kind: 'wire'|'custom'|'hotspot', alive}}
     """
@@ -401,9 +402,9 @@ def proxy_choices(include_none=True, include_add=False):
             mark = "✓" if alive else "✗"
             items.append((f"{mark} {v['port']:>5}  {k:<20} {v['desc'][:32]}", v["port"]))
     if include_none:
-        items.append(("-  tanpa proxy (pakai IP asli!)", "__none__"))
+        items.append(("-  no proxy (real IP!)", "__none__"))
     if include_add:
-        items.append(("+  tambah proxy belian / manual…", "__add__"))
+        items.append(("+  add purchased / manual proxy…", "__add__"))
     return items
 
 
@@ -436,7 +437,7 @@ def _curl_proxy_args(proxy):
     if not proxy:
         return []
     if proxy.startswith("socks5://"):
-        # socks5h = DNS lewat proxy juga
+        # socks5h = resolve DNS through the proxy too
         return ["-x", proxy.replace("socks5://", "socks5h://", 1)]
     return ["-x", proxy]
 
@@ -454,11 +455,11 @@ def store(p: pathlib.Path, data: dict) -> None:
 
 
 def current_engine() -> str:
-    """Versi binary yang BENAR-BENAR dipakai.
+    """The binary version that will ACTUALLY run.
 
-    Wrapper punya dua versi: `config.get_chromium_version()` (binary gratis yang
-    dibundel, mis. 146) dan versi Pro/berlisensi yang disimpan di sidecar.
-    Prioritas: sidecar (kalau ada license) -> konstanta wrapper.
+    The wrapper has two versions: `config.get_chromium_version()` (bundled free
+    binary, e.g. 146) and the licensed Pro version stored in the sidecar.
+    Priority: sidecar (when licensed) -> wrapper constant.
     """
     import platform as _pf
     tag = f"{'darwin' if _pf.system() == 'Darwin' else 'linux' if _pf.system() == 'Linux' else 'win32'}-" \
@@ -478,7 +479,7 @@ def current_engine() -> str:
 
 
 def ensure_seed(p: pathlib.Path) -> str:
-    """Seed identitas. Dibuat sekali, dipakai selamanya (persisten per folder)."""
+    """Identity seed. Created once, reused forever (persistent per folder)."""
     f = p / SEED_FILE
     if not f.exists():
         import random
@@ -496,10 +497,10 @@ def psize(p: pathlib.Path) -> float:
 
 
 def apply_search_engine(prof: pathlib.Path, key: str) -> bool:
-    """Set search engine default lewat Preferences (DB 'Web Data' ditimpa Chromium).
+    """Set default search engine via Preferences (Chromium overwrites 'Web Data').
 
-    Build CloakBrowser default-nya 'nosearch' (URL http://{searchTerms}), jadi
-    omnibox nggak bisa nyari. Pref ini yang dipakai TemplateURLService.
+    CloakBrowser default build is 'nosearch' (URL http://{searchTerms}), so the
+    omnibox cannot search. TemplateURLService reads this pref.
     """
     if not key:
         return False
@@ -534,7 +535,7 @@ def apply_search_engine(prof: pathlib.Path, key: str) -> bool:
 
 
 def _wd_query(prof: pathlib.Path, fn):
-    """Operasi ke 'Web Data' lewat salinan (DB sering terkunci)."""
+    """Operate on 'Web Data' via a copy (the DB is often locked)."""
     import sqlite3, shutil, tempfile
     src = prof / "Default" / "Web Data"
     if not src.exists():
@@ -572,15 +573,15 @@ def _insert_row_copy(con, row):
 
 
 def sync_search_from(master: str, targets=None) -> None:
-    """Tiru default search engine dari satu profil ke profil lain."""
+    """Copy the default search engine from one profile to others."""
     mprof = PROFILES / master
     try:
         block = json.loads((mprof / "Default/Preferences").read_text()).get("default_search_provider_data")
     except Exception:
         block = None
     if not block or "template_url_data" not in block:
-        print(c(f"  profil '{master}' belum punya default search engine", C.RE))
-        print(c("  set dulu di chrome://settings/searchEngines (Add + Make default)", C.D))
+        print(c(f"  profile '{master}' has no default search engine yet", C.RE))
+        print(c("  set it first in chrome://settings/searchEngines (Add + Make default)", C.D))
         return
     eng = block["template_url_data"]
     kw = eng["keyword"]
@@ -588,7 +589,7 @@ def sync_search_from(master: str, targets=None) -> None:
     got = _wd_query(mprof, lambda con: _keyword_row(con, kw))
     master_row = got[0] if got else None
     if not master_row:
-        print(c(f"  engine '{kw}' nggak ada di DB profil {master}", C.RE))
+        print(c(f"  engine '{kw}' not in profile DB {master}", C.RE))
         return
 
     names = targets or [n for n, _m in [(p.name, saved(p)) for p in sorted(PROFILES.iterdir()) if p.is_dir()]]
@@ -598,7 +599,7 @@ def sync_search_from(master: str, targets=None) -> None:
             continue
         prof = PROFILES / name
         if not (prof / "Default" / "Web Data").exists():
-            skip.append(f"{name} (belum pernah dibuka)")
+            skip.append(f"{name} (never launched)")
             continue
         # pastikan baris engine ada di DB target, ambil id-nya
         def op(con):
@@ -629,17 +630,20 @@ def sync_search_from(master: str, targets=None) -> None:
         pf.write_text(json.dumps(prefs, separators=(",", ":")))
         ok.append(f"{name} (id {rid})")
 
-    print(f"  {c('✓ search engine ditiru', C.G)} dari {c(master, C.CY)} → {eng.get('short_name')}")
+    print(f"  {c('✓ search engine copied', C.G)} from {c(master, C.CY)} → {eng.get('short_name')}")
     for x in ok:
         print("    +", x)
     for x in skip:
-        print(c(f"    - lewat: {x}", C.D))
+        print(c(f"    - skipped: {x}", C.D))
 
 
 def _running_browsers():
-    """PID + user-data-dir dari browser cloak yang lagi jalan (scan /proc)."""
+    """PID + user-data-dir of running cloak browsers (scan /proc; Linux only)."""
     out = []
-    for d in pathlib.Path("/proc").iterdir():
+    proc = pathlib.Path("/proc")
+    if not proc.is_dir():
+        return out
+    for d in proc.iterdir():
         if not d.name.isdigit():
             continue
         try:
@@ -658,7 +662,7 @@ def _running_browsers():
 
 
 def _proxy_exit_ip(proxy):
-    """Resolve IP keluar lewat proxy (buat --fingerprint-webrtc-ip)."""
+    """Resolve exit IP through the proxy (for --fingerprint-webrtc-ip)."""
     import subprocess
     if not proxy:
         return None
@@ -672,7 +676,7 @@ def _proxy_exit_ip(proxy):
 
 
 def _geo_for_proxy(proxy):
-    """timezone + locale dari IP keluar proxy (buat raw mode)."""
+    """timezone + locale from the proxy exit IP (for raw mode)."""
     import subprocess, json as _j
     if not proxy:
         return None, None
@@ -721,10 +725,10 @@ def test_proxy_url(proxy, save_label=None):
 
 
 def ensure_proxy_auth_ext(prof, proxy):
-    """Extension onAuthRequired buat proxy HTTP/SOCKS ber-password di raw mode.
+    """onAuthRequired extension for password-protected HTTP/SOCKS in raw mode.
 
-    Chromium --proxy-server nggak reliably pakai userinfo, jadi auth dilewatkan
-    extension. Return path extension atau None kalau nggak perlu/gagal.
+    Chromium --proxy-server does not reliably use userinfo, so auth goes through
+    an extension. Returns the extension path, or None if not needed / failed.
     """
     auth = proxy_auth(proxy)
     if not auth:
@@ -740,7 +744,7 @@ def ensure_proxy_auth_ext(prof, proxy):
         "host_permissions": ["<all_urls>"],
         "background": {"service_worker": "auth.js"},
     }, indent=2))
-    # Jangan taruh password mentah di JS tanpa escape
+    # Do not put a raw password in JS without escaping
     import json as _j
     (ext / "auth.js").write_text(
         "const CREDS = " + _j.dumps({"u": user, "p": passwd}) + ";\n"
@@ -770,10 +774,10 @@ def build_noise_js(seed: str, rects: bool, audio: bool):
 
 
 def ensure_noise_ext(prof: pathlib.Path, seed: str):
-    """Bikin extension per-profil berisi noise.js (seed sudah di-inject).
+    """Build a per-profile extension wrapping noise.js (seed already injected).
 
-    Dipakai di raw mode: `--load-extension` jadi noise jalan TANPA CDP.
-    Return: path extension atau None.
+    Used in raw mode: `--load-extension` so noise runs WITHOUT CDP.
+    Returns the extension path or None.
     """
     src = build_noise_js(seed, _noise_rects(meta=None, prof=prof), _noise_audio(prof))
     if not src:
@@ -794,7 +798,7 @@ def ensure_noise_ext(prof: pathlib.Path, seed: str):
 
 
 def pinned_binary(engine):
-    """Path binary untuk engine yang dipatok (wrapper 0.7.0 abaikan browser_version)."""
+    """Binary path for the pinned engine (wrapper 0.7.0 ignores browser_version)."""
     if not engine:
         return None
     b = HOME / ".cloakbrowser" / f"chromium-{engine}-pro" / "chrome"
@@ -811,7 +815,7 @@ def _noise_audio(prof):
 
 
 def _focus_browser_window(wait_s: float = 12.0) -> bool:
-    """Naikin jendela Chromium ke depan (butuh xdotool)."""
+    """Raise the Chromium window (needs xdotool)."""
     import shutil, subprocess, time
     if not shutil.which("xdotool"):
         return False
@@ -849,14 +853,14 @@ def _clean_locks(prof: pathlib.Path) -> int:
 
 
 def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_url=None):
-    """Jalankan CloakBrowser LANGSUNG dari binary — tanpa Playwright/CDP.
+    """Run CloakBrowser DIRECTLY from the binary — no Playwright/CDP.
 
-    Ini jalur default `clk` sekarang. Tidak ada --remote-debugging-pipe,
-    tidak ada JS injection (noise.js), jadi nggak ada sinyal automation.
+    This is the default `clk` path. No --remote-debugging-pipe, no JS injection
+    (noise.js), so there is no automation signal.
     """
     prof = PROFILES / name
     if not prof.exists():
-        print(c(f"  profil '{name}' belum ada. buat dulu: /new {name}", C.RE))
+        print(c(f"  profile '{name}' does not exist. create it: /new {name}", C.RE))
         return
     meta = saved(prof)
     seed = ensure_seed(prof)
@@ -866,7 +870,7 @@ def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_u
     if not binary.exists():
         cands = sorted((HOME / ".cloakbrowser").glob("chromium-*/chrome"))
         if not cands:
-            print(c("  binary chrome nggak ketemu", C.RE))
+            print(c("  chrome binary not found", C.RE))
             return
         binary = cands[-1]
 
@@ -874,7 +878,7 @@ def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_u
     if proxy and is_local_socks(proxy):
         use_port = int(proxy.rsplit(":", 1)[1])
         if not port_open(use_port):
-            print(c(f"  ⚠ port {use_port} nggak ada yang listen — jalan tanpa proxy", C.Y))
+            print(c(f"  ⚠ nothing listening on port {use_port} — running without proxy", C.Y))
             proxy = None
     else:
         use_port = None
@@ -912,11 +916,10 @@ def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_u
     args += [f"--lang={locale}", f"--fingerprint-locale={locale}"]
     exts = []
     if proxy:
-        # Jangan taruh user:pass di --proxy-server (Chromium sering abaikan / bocor di ps).
+        # Do not put user:pass in --proxy-server (Chromium often ignores it / leaks via ps).
         args.append(f"--proxy-server={strip_creds(proxy)}")
-        # di belakang SOCKS nggak ada UDP → Chrome normal pun nggak bisa STUN.
-        # Flag ini menghentikan percobaan STUN (yang cuma nge-flood log) dan
-        # mencegah kebocoran IP asli lewat WebRTC.
+        # Behind SOCKS there is no UDP → even stock Chrome cannot STUN.
+        # This flag stops STUN attempts (log flood) and prevents real-IP leaks via WebRTC.
         args.append("--force-webrtc-ip-handling-policy=disable_non_proxied_udp")
         ip = _proxy_exit_ip(proxy)
         if ip:
@@ -936,16 +939,16 @@ def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_u
     args.append(target)
 
     print()
-    print(f"  {c('RAW MODE', C.B)} {c(name, C.CY)}  {c('· tanpa Playwright/CDP', C.D)}")
+    print(f"  {c('RAW MODE', C.B)} {c(name, C.CY)}  {c('· no Playwright/CDP', C.D)}")
     _pshow = proxy
     if _pshow and proxy_auth(_pshow):
         _pshow = strip_creds(_pshow) + c("  (auth via extension)", C.D)
-    print(f"  proxy    : {_pshow or 'LANGSUNG (IP asli)'}")
+    print(f"  proxy    : {_pshow or 'DIRECT (real IP)'}")
     print(f"  seed     : {seed}   hw: {_hw_text(meta)}")
-    print(f"  bahasa   : {locale}   timezone: {tz or 'sistem'}")
+    print(f"  locale   : {locale}   timezone: {tz or 'system'}")
     _r, _a = _noise_rects(meta), _noise_audio(prof)
     print(f"  noise.js : rects={'on' if _r else 'off'} · audio={'on' if _a else 'off'}")
-    # --- seat: tunggu sendiri kalau masih ditahan server ---
+    # --- seat: wait ourselves if the server is still holding it ---
     import subprocess as _sp, time as _t
     def _seat():
         try:
@@ -960,13 +963,13 @@ def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_u
     if st.startswith("1/"):
         cur = _running_browsers()
         if cur:
-            print(c(f"  ✗ seat dipakai browser yang MASIH jalan ({st})", C.RE))
+            print(c(f"  ✗ seat is used by a browser that is STILL running ({st})", C.RE))
             for pid, udd in cur[:3]:
                 print(c(f"      pid {pid}  {udd}", C.D))
-            print(c("    tutup jendelanya dulu, JANGAN kill.", C.D))
+            print(c("    close the window first, do NOT kill.", C.D))
             return
-        print(c(f"  seat masih ditahan server ({st}), belum lepas walau browser sudah mati.", C.Y))
-        print(c("  nungguin otomatis (maks 6 menit, Ctrl+C buat batal)...", C.D), flush=True)
+        print(c(f"  seat is still held by the server ({st}), not released even though the browser is dead.", C.Y))
+        print(c("  waiting automatically (max 6 minutes, Ctrl+C to cancel)...", C.D), flush=True)
         end = _t.time() + 360
         while _t.time() < end:
             _t.sleep(20)
@@ -977,10 +980,10 @@ def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_u
                 break
             print(c(f"    masih {st} — sisa tunggu {left}s", C.D), flush=True)
         else:
-            print(c("  ✗ seat nggak lepas dalam 6 menit. coba lagi nanti.", C.RE))
+            print(c("  ✗ seat did not release within 6 minutes. try again later.", C.RE))
             return
 
-    print(c("  tutup jendelanya buat selesai", C.D), flush=True)
+    print(c("  close the window to finish", C.D), flush=True)
 
     blog = VAULT / "logs" / f"{prof.name}-browser.log"
     blog.parent.mkdir(parents=True, exist_ok=True)
@@ -1014,13 +1017,13 @@ def launch_raw(name, url=None, headless=False, port=None, noproxy=False, proxy_u
     store(prof, meta)
     _clean_locks(prof)
     if rc != 0:
-        print(c(f"  ditutup (exit {rc}) — log: {blog}", C.Y))
+        print(c(f"  closed (exit {rc}) — log: {blog}", C.Y))
     else:
-        print(c("  ditutup.", C.D))
+        print(c("  closed.", C.D))
 
 
 def cmd_status():
-    """Diagnosa: seat, browser jalan, disk, lock nyangkut, ukuran profil."""
+    """Diagnostics: seat, running browsers, disk, stale locks, profile size."""
     import subprocess
     print()
     # seat
@@ -1030,36 +1033,39 @@ def cmd_status():
         seat = next((l.split(":", 1)[1].strip() for l in out.splitlines() if l.startswith("Sessions")), "?")
         ver = next((l.split(":", 1)[1].strip() for l in out.splitlines() if l.startswith("Launch")), "?")
     except Exception as e:
-        seat, ver = f"gagal cek ({e})", "?"
+        seat, ver = f"check failed ({e})", "?"
     print(f"  seat       : {c(seat, C.G if seat.startswith('0/') else C.RE)}   {ver}")
 
     running = _running_browsers()
-    print(f"  browser    : {len(running)} proses chrome" +
-          (c("  ← ini yang makan seat", C.Y) if running else ""))
+    print(f"  browser    : {len(running)} chrome process(es)" +
+          (c("  ← these hold the seat", C.Y) if running else ""))
     for pid, udd in running[:4]:
         print(c(f"               pid {pid}  {udd}", C.D))
 
-    # disk
-    st = os.statvfs(str(HOME))
-    free_gb = st.f_bavail * st.f_frsize / 1e9
-    col = C.RE if free_gb < 5 else C.G
-    print(f"  disk       : {c(f'{free_gb:.1f} GB sisa', col)}")
+    # disk (shutil.disk_usage is cross-platform; os.statvfs is Unix-only)
+    try:
+        free_gb = shutil.disk_usage(HOME).free / 1e9
+    except Exception:
+        free_gb = None
+    if free_gb is not None:
+        col = C.RE if free_gb < 5 else C.G
+        print(f"  disk       : {c(f'{free_gb:.1f} GB free', col)}")
 
-    # lock nyangkut
+    # stale locks
     stale = []
     for prof, _m in profiles():
         if (prof / "SingletonLock").exists() and not any(str(prof) == u for _p, u in running):
             stale.append(prof.name)
     if stale:
-        print(f"  lock beku  : {c(len(stale), C.Y)} profil ({', '.join(stale[:5])}{'…' if len(stale) > 5 else ''})")
-        print(c("               buka profil itu bakal gagal 'existing browser session'", C.D))
+        print(f"  stale lock : {c(len(stale), C.Y)} profile(s) ({', '.join(stale[:5])}{'…' if len(stale) > 5 else ''})")
+        print(c("               launching that profile will fail with 'existing browser session'", C.D))
     else:
-        print(f"  lock beku  : {c('tidak ada', C.G)}")
+        print(f"  stale lock : {c('none', C.G)}")
 
-    # profil
+    # profiles
     rows = profiles()
     total = sum(psize(p) for p, _m in rows)
-    print(f"  profil     : {len(rows)} · {total / 1000:.1f} GB")
+    print(f"  profiles   : {len(rows)} · {total / 1000:.1f} GB")
     big = sorted(((psize(p), p.name) for p, _m in rows), reverse=True)[:3]
     if big:
         print(c("               terbesar: " + ", ".join(f"{n} {sz:.0f}MB" for sz, n in big), C.D))
@@ -1071,7 +1077,7 @@ def cmd_status():
     print(f"  engine     : " + ", ".join(f"{k}={v}" for k, v in eng.items()))
 
     if stale:
-        print(f"\n  bersihin lock: {c('/fixlocks', C.CY)} atau {c('clk fixlocks', C.CY)}")
+        print(f"\n  clean locks: {c('/fixlocks', C.CY)} or {c('clk fixlocks', C.CY)}")
     print()
 
 
@@ -1089,7 +1095,7 @@ def cmd_fixlocks():
                     n += 1
                 except Exception:
                     pass
-    print(c(f"  ✓ {n} file lock dibersihin", C.G) if n else c("  tidak ada lock nyangkut", C.D))
+    print(c(f"  ✓ removed {n} lock file(s)", C.G) if n else c("  no stale locks", C.D))
 
 
 def real_screen() -> str:
@@ -1113,7 +1119,7 @@ REAL_SCREEN = real_screen()
 def _hw_text(m) -> str:
     hw = m.get("hw") or {}
     if not hw:
-        return "auto (dari seed)"
+        return "auto (from seed)"
     parts = []
     if hw.get("cores"):
         parts.append(f"{hw['cores']} core")
@@ -1123,7 +1129,7 @@ def _hw_text(m) -> str:
         parts.append(str(hw["screen"]))
     if hw.get("gpu"):
         parts.append(str(hw["gpu"]))
-    return " · ".join(parts) or "auto (dari seed)"
+    return " · ".join(parts) or "auto (from seed)"
 
 
 def profiles():
@@ -1142,7 +1148,7 @@ def proxy_of(meta: dict):
     if meta.get("port"):
         return meta["port"], f"{meta['port']} ({label_for(meta['port'])})"
     if meta.get("proxy") is None and "port" in meta:
-        return "__none__", c("NO PROXY", C.Y) + " (IP asli)"
+        return "__none__", c("NO PROXY", C.Y) + " (real IP)"
     if meta.get("proxy"):
         px = meta["proxy"]
         # sembunyiin password di daftar
@@ -1151,17 +1157,17 @@ def proxy_of(meta: dict):
             host = rest.split("@", 1)[-1]
             px = f"{scheme}://{host}"
         return px, px[:40]
-    return None, c("-- belum diset --", C.D)
+    return None, c("-- not set --", C.D)
 
 
 # ---------------- display ----------------
 def show_list():
     rows = profiles()
     if not rows:
-        print(c("  belum ada profil. ketik: /new", C.Y))
+        print(c("  no profiles yet. type: /new", C.Y))
         return
     print()
-    print(c(f"  {'PROFIL':<14}{'SEED':<8}{'HW':<26}{'UKURAN':<10}{'PROXY':<28}TERAKHIR", C.B))
+    print(c(f"  {'PROFILE':<14}{'SEED':<8}{'HW':<26}{'SIZE':<10}{'PROXY':<28}LAST RUN", C.B))
     print(c("  " + "-" * 95, C.D))
     for p, m in rows:
         port, ptxt = proxy_of(m)
@@ -1172,13 +1178,13 @@ def show_list():
             stat = c(" ?", C.D)
         print(f"  {c(p.name, C.CY):<23}{seed_of(p):<8}{_hw_text(m)[:25]:<26}"
               f"{psize(p):>6.1f} MB  {ptxt:<28}{m.get('last_run', '-')}{stat}")
-    print(c(f"\n  total {len(rows)} profil · {sum(psize(p) for p, _ in rows):.1f} MB", C.D))
+    print(c(f"\n  total {len(rows)} profiles · {sum(psize(p) for p, _ in rows):.1f} MB", C.D))
 
 
 def show_proxies():
     px = discover_proxies()
     print()
-    print(c(f"  {'LABEL':<22}{'JENIS':<8}{'PORT':<7}{'STATUS':<11}ENDPOINT", C.B))
+    print(c(f"  {'LABEL':<22}{'KIND':<8}{'PORT':<7}{'STATUS':<11}ENDPOINT", C.B))
     print(c("  " + "-" * 84, C.D))
     alive_n = 0
     for k, v in px.items():
@@ -1202,20 +1208,20 @@ def show_proxies():
         port_s = str(v.get("port") or "-")
         print(f"  {k:<22}{kind:<8}{port_s:<7}"
               f"{(c('up', C.G) if alive else c('DOWN', C.RE)):<20}{endpoint}")
-    print(c(f"\n  {alive_n}/{len(px)} hidup  ·  tambah belian: {c('/addproxy', C.CY)}", C.D))
+    print(c(f"\n  {alive_n}/{len(px)} up  ·  add purchased: {c('/addproxy', C.CY)}", C.D))
 
 
 def act_addproxy(args):
     """/addproxy [url|host:port:user:pass] [label]
 
     Terima format Webshare dashboard: host:port:user:pass
-    atau URL lengkap: http://user:pass@host:port
+    or a full URL: http://user:pass@host:port
     """
     import questionary
     text = next((a for a in args if not a.startswith("-")), None)
     label = None
     if len(args) >= 2 and not args[0].startswith("://") and "://" not in args[0]:
-        # /addproxy <text> <label> ATAU /addproxy <label> <text>
+        # /addproxy <text> <label> OR /addproxy <label> <text>
         if "://" in args[1] or args[1].count(":") >= 1:
             text = args[0]
             label = args[1]
@@ -1224,18 +1230,18 @@ def act_addproxy(args):
             label = args[1]
     if not text:
         text = _ask(questionary.text(
-            "Proxy (URL atau host:port:user:pass):"
+            "Proxy (URL or host:port:user:pass):"
         ))
         if not text:
-            print(c("  dibatalkan", C.D))
+            print(c("  cancelled", C.D))
             return
     parsed = parse_proxy_text(text)
     if not parsed:
-        print(c("  format nggak dikenal. contoh:", C.RE))
+        print(c("  unrecognized format. examples:", C.RE))
         print(c("    http://user:pass@203.0.113.10:6014", C.D))
         print(c("    socks5://user:pass@1.2.3.4:1080", C.D))
-        print(c("    203.0.113.10:6014:myuser:mypass        (format Webshare)", C.D))
-        print(c("    203.0.113.10:6014                      (tanpa auth)", C.D))
+        print(c("    203.0.113.10:6014:myuser:mypass        (Webshare format)", C.D))
+        print(c("    203.0.113.10:6014                      (no auth)", C.D))
         return
     if not label:
         host = parsed["host"]
@@ -1243,7 +1249,7 @@ def act_addproxy(args):
         label = _ask(questionary.text("Label:", default=deflabel)) or deflabel
     label = re.sub(r"[^A-Za-z0-9._-]", "-", label)[:40]
     store = load_proxy_store()
-    if label in store and not _ask_confirm(f"Label '{label}' sudah ada. Timpa?"):
+    if label in store and not _ask_confirm(f"Label '{label}' already exists. Overwrite?"):
         return
     desc = _ask(questionary.text("Keterangan (opsional):", default="")) or ""
     entry = {
@@ -1256,44 +1262,44 @@ def act_addproxy(args):
     }
     store[label] = entry
     save_proxy_store(store)
-    print(c(f"  ✓ disimpan {label}", C.G))
+    print(c(f"  ✓ saved {label}", C.G))
     print(c(f"    {parsed['scheme']}://{parsed['host']}:{parsed['port']}", C.D))
     print(c("    ngetes exit IP…", C.D), flush=True)
     ip, cc, tz = test_proxy_url(parsed["url"], save_label=label)
     if ip:
-        print(c(f"    ✓ hidup  {ip}  {cc or ''}  {tz or ''}", C.G))
+        print(c(f"    ✓ alive  {ip}  {cc or ''}  {tz or ''}", C.G))
     else:
-        print(c("    ✗ nggak bisa konek (cek user/pass/whitelist IP)", C.RE))
-    print(c(f"    pakai: /proxy <profil>  lalu pilih {label}", C.D))
+        print(c("    ✗ cannot connect (check user/pass/IP whitelist)", C.RE))
+    print(c(f"    use: /proxy <profile>  then pick {label}", C.D))
 
 
 def act_rmproxy(args):
     store = load_proxy_store()
     if not store:
-        print(c("  proxies.json masih kosong", C.Y))
+        print(c("  proxies.json is empty", C.Y))
         return
     name = args[0] if args else None
     if not name:
         import questionary
         choices = [f"{k:<22} {v.get('desc','')[:36]}" for k, v in store.items()]
-        sel = _ask(questionary.select("Hapus proxy mana?", choices=choices))
+        sel = _ask(questionary.select("Delete which proxy?", choices=choices))
         if not sel:
             return
         name = next((k for k in store if sel.startswith(k)), sel.split()[0])
     if name not in store:
-        print(c(f"  '{name}' nggak ada di proxies.json", C.RE))
+        print(c(f"  '{name}' not in proxies.json", C.RE))
         return
-    if not _ask_confirm(f"Hapus proxy '{name}'?"):
+    if not _ask_confirm(f"Delete proxy '{name}'?"):
         return
     store.pop(name)
     save_proxy_store(store)
-    print(c(f"  ✓ '{name}' dihapus", C.G))
+    print(c(f"  ✓ '{name}' deleted", C.G))
 
 
 def act_testproxy(args):
     store = load_proxy_store()
     if not store:
-        print(c("  belum ada proxy belian. /addproxy dulu", C.Y))
+        print(c("  no purchased proxies yet. /addproxy first", C.Y))
         return
     name = args[0] if args else None
     targets = [name] if name in store else list(store)
@@ -1304,36 +1310,36 @@ def act_testproxy(args):
         if ip:
             print(c(f"    ✓ {ip}  {cc or ''}  {tz or ''}", C.G))
         else:
-            print(c("    ✗ gagal", C.RE))
+            print(c("    ✗ failed", C.RE))
 
 
 def show_help():
     print(f"""
-{c('  CloakBrowser Manager', C.B)} {c('- semua command juga bisa dari menu panah', C.D)}
+{c('  CloakBrowser Manager', C.B)} {c('- every command also works from the arrow menus', C.D)}
 
-  {c('/new', C.CY)} [name]      wizard: nama -> proxy (buat folder profil)
-  {c('/run', C.CY)} [name]      buka browser (menu panah kalau nama/proxy kosong)
-     {c('  /run name bg', C.D)}   jalan di background, prompt tetap aktif
+  {c('/new', C.CY)} [name]      wizard: name -> proxy (creates the profile folder)
+  {c('/run', C.CY)} [name]      launch browser (arrow menu if name/proxy empty)
+     {c('  /run name bg', C.D)}   run in background, prompt stays live
      {c('  /run name --headless', C.D)}
-  {c('/proxy', C.CY)} [name]    set proxy default profil (menu panah)
-  {c('/proxies', C.CY)}         cek wireproxy + proxy belian
-  {c('/addproxy', C.CY)}        tambah proxy belian (Webshare dll)
-  {c('/rmproxy', C.CY)}         hapus proxy belian
-  {c('/testproxy', C.CY)} [label]  tes exit IP proxy belian
-  {c('/info', C.CY)} [name]     identitas tersimpan (seed, platform, proxy)
-  {c('/newseed', C.CY)} [name]  rotasi identitas (cookie tetap)
-  {c('/rm', C.CY)} [name]       hapus profil + semua datanya
-  {c('/list', C.CY)}            daftar profil
-  {c('/set', C.CY)} [name]      atur hardware manual (CPU, RAM, layar, GPU)
-  {c('/newfp', C.CY)} [name]    roll ulang model GPU (ala New Fingerprint)
-  {c('/noise', C.CY)} [name] rects|audio on|off  noise per sinyal (rects default off)
-  {c('/raw', C.CY)} [name]      jalankan tanpa CDP (buat Turnstile/login manual)
-  {c('/status', C.CY)}          seat, browser jalan, disk, lock, ukuran profil
-  {c('/fixlocks', C.CY)}        bersihin SingletonLock yang nyangkut
-  {c('--noise-rects on|off', C.CY)}  noise ClientRects+Audio via shim (default on)
-  {c('/doctor', C.CY)}          diagnosa cloakbrowser (binary, font, versi)
-  {c('/help', C.CY)}            bantuan
-  {c('/quit', C.CY)}            keluar
+  {c('/proxy', C.CY)} [name]    set the profile's default proxy (arrow menu)
+  {c('/proxies', C.CY)}         check wireproxy + purchased proxies
+  {c('/addproxy', C.CY)}        add a purchased proxy (Webshare, etc.)
+  {c('/rmproxy', C.CY)}         remove a purchased proxy
+  {c('/testproxy', C.CY)} [label]  test purchased-proxy exit IP
+  {c('/info', C.CY)} [name]     stored identity (seed, platform, proxy)
+  {c('/newseed', C.CY)} [name]  rotate identity (cookies kept)
+  {c('/rm', C.CY)} [name]       delete profile + all its data
+  {c('/list', C.CY)}            list profiles
+  {c('/set', C.CY)} [name]      manual hardware (CPU, RAM, screen, GPU)
+  {c('/newfp', C.CY)} [name]    reroll GPU model (like New Fingerprint)
+  {c('/noise', C.CY)} [name] rects|audio on|off  per-signal noise (rects default off)
+  {c('/raw', C.CY)} [name]      launch without CDP (for Turnstile/manual login)
+  {c('/status', C.CY)}          seat, running browsers, disk, locks, profile size
+  {c('/fixlocks', C.CY)}        clean stale SingletonLocks
+  {c('--noise-rects on|off', C.CY)}  ClientRects+Audio noise via shim (default on)
+  {c('/doctor', C.CY)}          cloakbrowser diagnostics (binary, fonts, version)
+  {c('/help', C.CY)}            help
+  {c('/quit', C.CY)}            quit
 
   {c('tab', C.D)}=autocomplete   {c('↑↓', C.D)}=history
 """)
@@ -1341,7 +1347,7 @@ def show_help():
 
 # ---------------- core ----------------
 def _ask(q):
-    """questionary wrapper - None kalau bukan TTY."""
+    """questionary wrapper - None when not a TTY."""
     try:
         import questionary
     except Exception:
@@ -1365,16 +1371,16 @@ def launch_profile(name, *, port=None, proxy=None, url=None, headless=False,
     if new_seed:
         for f in profile.glob(f"{SEED_FILE}*"):
             f.unlink()
-        print(c("  → seed dirotasi (identitas baru, cookie & login tetap)", C.Y))
+        print(c("  → seed rotated (new identity, cookies & login kept)", C.Y))
 
     meta.setdefault("created", time.strftime("%Y-%m-%d"))
     meta.setdefault("platform", "windows")
-    # Identitas diturunkan dari (seed + versi binary). Ganti binary = bisa ganti
-    # GPU/RAM/CPU. Jadi versi engine dipatok per profil, biar nggak berubah
-    # sendiri waktu `cloakbrowser update`.
+    # Identity is derived from (seed + binary version). Changing the binary can
+    # change GPU/RAM/CPU. Engine version is pinned per profile so `cloakbrowser update`
+    # does not silently change identity.
     if engine:
         if meta.get("engine") and meta["engine"] != engine:
-            print(c(f"  ⚠ engine {meta['engine']} → {engine}: identitas bakal diturunkan ulang", C.Y))
+            print(c(f"  ⚠ engine {meta['engine']} → {engine}: identity will be re-derived", C.Y))
         meta["engine"] = engine
     meta.setdefault("engine", current_engine())
 
@@ -1403,12 +1409,12 @@ def launch_profile(name, *, port=None, proxy=None, url=None, headless=False,
             meta["port"] = int(proxy.rsplit(":", 1)[1])
         elif proxy:
             meta["port"] = None
-        # kalau tetap None: memang tanpa proxy (jangan paksa DEFAULT_PORT)
+        # if still None: genuinely no proxy (do not force DEFAULT_PORT)
 
     meta["proxy"] = proxy
     meta["url"] = url or meta.get("url") or DEFAULT_URL
-    # Bahasa: patokan dari profil Dolphin lo -> selalu "en-US,en".
-    # Timezone: ikut geolokasi proxy (geoip), kecuali dipatok manual.
+    # Locale: match Dolphin profiles -> always "en-US,en".
+    # Timezone: follow proxy geolocation (geoip), unless pinned manually.
     if locale:
         meta["locale"] = locale
     meta.setdefault("locale", DEFAULT_LOCALE)
@@ -1440,25 +1446,31 @@ def launch_profile(name, *, port=None, proxy=None, url=None, headless=False,
     if bg:
         log = VAULT / "logs" / f"{name}.log"
         log.parent.mkdir(parents=True, exist_ok=True)
+        popen_kw = {"stdin": subprocess.DEVNULL,
+                    "stdout": open(log, "w"),
+                    "stderr": subprocess.STDOUT}
+        if os.name == "nt":
+            popen_kw["creationflags"] = getattr(subprocess, "DETACHED_PROCESS", 0)
+        else:
+            popen_kw["start_new_session"] = True
         subprocess.Popen([str(SELF), name, "--url", meta["url"],
                           *([f"--port={meta['port']}"] if meta.get("port")
                             else ([f"--proxy={meta['proxy']}"] if meta.get("proxy") else ["--noproxy"])),
-                          *(["--headless"] if headless else []), "--detach"],
-                         stdin=subprocess.DEVNULL, stdout=open(log, "w"),
-                         stderr=subprocess.STDOUT, start_new_session=True)
-        print(c(f"  → {name} jalan di background · log: {log}", C.G))
+                          *( ["--headless"] if headless else []), "--detach"],
+                         **popen_kw)
+        print(c(f"  → {name} running in background · log: {log}", C.G))
         return
 
     if meta.get("port") and not port_open(meta["port"]):
-        print(c(f"  ⚠ port {meta['port']} tidak ada yang listen — proxy kemungkinan mati", C.Y))
-        if not force and _ask_confirm("  tetap jalan tanpa proxy hidup?"):
+        print(c(f"  ⚠ nothing listening on port {meta['port']} — proxy is probably down", C.Y))
+        if not force and _ask_confirm("  launch anyway without a live proxy?"):
             pass
         elif not force:
             return
 
     seed = ensure_seed(profile)
-    # stealth_args=False: jangan pakai default wrapper, karena dia menyuntik
-    # --no-sandbox yang memunculkan infobar "unsupported command-line flag".
+    # stealth_args=False: do not use the wrapper defaults; they inject --no-sandbox
+    # which shows the "unsupported command-line flag" infobar.
     if meta.get("search"):
         apply_search_engine(profile, meta["search"])
 
@@ -1476,7 +1488,7 @@ def launch_profile(name, *, port=None, proxy=None, url=None, headless=False,
         cli_args.append(f"--fingerprint-gpu-vendor={hw['gpu']}")
     if hw.get("gpu_renderer"):
         cli_args.append(f"--fingerprint-gpu-renderer={hw['gpu_renderer']}")
-    # noise OFF membuat canvas identik di semua profil (terukur), jadi default ON.
+    # noise OFF makes canvas identical across profiles (measured), so default is ON.
     if meta.get("noise") is False:
         cli_args.append("--fingerprint-noise=false")
 
@@ -1503,28 +1515,28 @@ def launch_profile(name, *, port=None, proxy=None, url=None, headless=False,
     except Exception as e:
         msg = str(e)
         if "session limit" in msg.lower():
-            print(c("  ✗ sesi penuh: plan gratis cuma 1 browser sekaligus.", C.RE))
-            print(c("    Tutup browser lewat jendelanya (atau Enter), JANGAN kill -9.", C.D))
-            print(c("    Seat yang ditinggal mati baru lepas ~4 menit.", C.D))
+            print(c("  ✗ session full: the free plan allows only 1 browser at a time.", C.RE))
+            print(c("    Close the browser via its window (or Enter), do NOT kill -9.", C.D))
+            print(c("    A killed seat takes ~4 minutes to release.", C.D))
             print(c("    Cek: ~/cloak/venv/bin/cloakbrowser doctor | grep Sessions", C.D))
         elif "existing browser session" in msg.lower():
-            print(c("  ✗ profil ini sedang dipakai proses lain. Tutup dulu.", C.RE))
+            print(c("  ✗ this profile is in use by another process. Close it first.", C.RE))
         else:
-            print(c(f"  ✗ gagal buka: {msg[:200]}", C.RE))
+            print(c(f"  ✗ launch failed: {msg[:200]}", C.RE))
         return
-    # --- noise rects + audio (engine CloakBrowser belum punya) ---
+    # --- rects + audio noise (the CloakBrowser engine does not have these yet) ---
     if meta.get("noise_rects", False):
         try:
             js = (VAULT / "noise.js").read_text().replace("__SEED__", str(int(seed)))
             ctx.add_init_script(script=js)
         except Exception as e:
-            print(c(f"  ⚠ noise.js gagal dipasang: {e}", C.Y))
+            print(c(f"  ⚠ failed to install noise.js: {e}", C.Y))
 
     page = ctx.pages[0] if ctx.pages else ctx.new_page()
     try:
         page.goto(meta["url"], wait_until="domcontentloaded", timeout=45000)
     except Exception as e:
-        print(c(f"  ⚠ gagal buka {meta['url']}: {str(e)[:100]}", Y_ := C.Y))
+        print(c(f"  ⚠ failed to open {meta['url']}: {str(e)[:100]}", C.Y))
 
     info = page.evaluate("""() => {
       const cv = document.createElement('canvas').getContext('webgl');
@@ -1542,31 +1554,31 @@ def launch_profile(name, *, port=None, proxy=None, url=None, headless=False,
     }""")
 
     print(f"\n  {c(name, C.B)}  {c('seed ' + seed_of(profile), C.D)}")
-    print(f"  proxy    : {proxy or 'LANGSUNG (IP asli)'}")
+    print(f"  proxy    : {proxy or 'DIRECT (real IP)'}")
     print(f"  platform : {info['platform']}   screen: {info['screen']}")
-    print(f"  bahasa   : {meta['locale']}  (navigator.languages: {info.get('langs', '-')})"
+    print(f"  locale   : {meta['locale']}  (navigator.languages: {info.get('langs', '-')})"
           f"   timezone: {info['tz']}")
     print(f"  cpu/ram  : {info['cores']} core / {info['mem']} GB")
     print(f"  gpu      : {info['gpu']}")
 
-    # Tunggu sampai user selesai. Apa pun yang terjadi (Ctrl+C, jendela
-    # ditutup, error), ctx HARUS ditutup — kalau tidak, seat plan gratis
-    # ke-hold sampai 4 menit dan profil jadi "sedang dipakai".
+    # Wait for the user to finish. Whatever happens (Ctrl+C, window closed,
+    # error), ctx MUST be closed — otherwise the free-plan seat is held
+    # for ~4 minutes and the profile looks "in use".
     try:
         if detach:
-            print(c("\n  (mode background — tutup jendela browser buat mengakhiri)", C.D), flush=True)
+            print(c("\n  (background mode — close the browser window to end)", C.D), flush=True)
             try:
                 page.wait_for_event("close", timeout=0)
             except Exception:
                 pass
         elif not headless:
-            print(c("\n  (jendela terbuka — tekan Enter di sini buat nutup)", C.D), flush=True)
+            print(c("\n  (window open — press Enter here to close it)", C.D), flush=True)
             try:
                 input()
             except (EOFError, KeyboardInterrupt):
-                print(c("  (dihentikan dari keyboard)", C.D))
+                print(c("  (stopped from keyboard)", C.D))
     except Exception as e:
-        # user nutup jendela / target mati: bukan error
+        # user closed the window / target died: not an error
         if "TargetClosed" not in type(e).__name__ and "has been closed" not in str(e):
             raise
     finally:
@@ -1576,7 +1588,7 @@ def launch_profile(name, *, port=None, proxy=None, url=None, headless=False,
             ctx.close()
         except Exception:
             pass
-        print(c("  ditutup.", C.D))
+        print(c("  closed.", C.D))
 
 
 def _ask_confirm(text):
@@ -1589,10 +1601,10 @@ def _ask_confirm(text):
     return questionary.confirm(text).ask()
 
 
-def _pick_name(title="Pilih profil:"):
+def _pick_name(title="Pick a profile:"):
     rows = profiles()
     if not rows:
-        print(c("  belum ada profil. ketik: /new", C.Y))
+        print(c("  no profiles yet. type: /new", C.Y))
         return None
     if len(rows) == 1:
         return rows[0][0].name
@@ -1602,7 +1614,7 @@ def _pick_name(title="Pilih profil:"):
     return sel.split()[0] if sel else None
 
 
-def _pick_proxy(title="Pilih proxy:"):
+def _pick_proxy(title="Pick a proxy:"):
     items = proxy_choices(include_add=True)
     if not sys.stdin.isatty():
         return None
@@ -1619,16 +1631,16 @@ def _pick_proxy(title="Pilih proxy:"):
 def act_run(args):
     name = next((a for a in args if not a.startswith("-") and a not in ("bg", "cdp")), None)
     if not name:
-        name = _pick_name("Profil mana yang mau dibuka?")
+        name = _pick_name("Which profile do you want to open?")
         if not name:
             return
     p = PROFILES / name
     meta = saved(p)
     proxy = None
     if p.exists() and "port" not in meta and not meta.get("proxy") and not meta.get("proxy_label"):
-        proxy = _pick_proxy(f"Proxy buat '{name}':")
+        proxy = _pick_proxy(f"Proxy for '{name}':")
     if "cdp" in args:
-        # jalur lama: Playwright (perlu buat cek fingerprint / noise.js)
+        # legacy path: Playwright (needed to measure fingerprint / noise.js)
         return launch_profile(name, headless="--headless" in args, bg="bg" in args,
                               new_seed="--new" in args, proxy=proxy)
     if proxy == "__none__":
@@ -1646,14 +1658,14 @@ class _Back:
 
 
 class _Finish:
-    """sentinel '✓ langsung buat sekarang'"""
+    """sentinel '✓ create now'"""
 
 
 _BACK, _FINISH = _Back(), _Finish()
 
 
 def act_new(args):
-    """Wizard profil baru: nama -> proxy -> CPU -> RAM -> layar -> GPU."""
+    """New profile wizard: name -> proxy -> CPU -> RAM -> screen -> GPU."""
     def arg_val(flag):
         if flag in args:
             i = args.index(flag)
@@ -1667,15 +1679,15 @@ def act_new(args):
     name = next((a for a in args if not a.startswith("-")), None)
     if not name and "--noproxy" not in args:
         import questionary
-        name = _ask(questionary.text("Nama profil baru (mis. acc11):"))
+        name = _ask(questionary.text("New profile name (e.g. acc11):"))
     if not name:
         return
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,32}", name):
-        print(c("  nama cuma boleh huruf/angka/._- (maks 32)", C.RE))
+        print(c("  name allows only letters/digits/._- (max 32)", C.RE))
         return
     prof = PROFILES / name
     if prof.exists():
-        print(c(f"  profil '{name}' sudah ada. buka: /run {name}", C.Y))
+        print(c(f"  profile '{name}' already exists. open: /run {name}", C.Y))
         return
 
     interactive = sys.stdin.isatty()
@@ -1704,22 +1716,22 @@ def act_new(args):
         proxy = proxy_arg
         if proxy is None:
             proxy = DEFAULT_PORT
-            print(c(f"  (tanpa menu: pakai port default {DEFAULT_PORT})", C.D))
+            print(c(f"  (no menu: using default port {DEFAULT_PORT})", C.D))
         cores, mem, screen, gpu = cores_a, mem_a, screen_a, gpu_a
         if model_a:
             gpu_renderer = resolve_gpu_model(model_a, gpu)
             if not gpu_renderer:
-                sys.exit(f"  model GPU '{model_a}' nggak ada di katalog")
+                sys.exit(f"  GPU model '{model_a}' not in the catalog")
     else:
         import questionary
 
         BACK, FINISH = _BACK, _FINISH
 
         def ask(title, pairs, current=None, allow_back=True, allow_finish=False):
-            """Menu panah + opsi 'kembali' dan 'langsung buat'."""
+            """Arrow menu + 'back' and 'create now' options."""
             opts = [questionary.Choice(lbl, val) for lbl, val in pairs]
             if allow_finish:
-                opts.append(questionary.Choice("✓ langsung buat sekarang (selebihnya auto)", FINISH))
+                opts.append(questionary.Choice("✓ create now (rest auto)", FINISH))
             if allow_back:
                 opts.append(questionary.Choice("← kembali", BACK))
             idx = 0
@@ -1738,35 +1750,35 @@ def act_new(args):
             return all(k in ans for k in ("proxy", "cores", "mem", "screen"))
 
         def state_line():
-            """Tabel ringkas pilihan yang udah masuk — selalu kelihatan di atas menu."""
+            """Compact table of answers so far — always shown above the menu."""
             px = ans.get("proxy")
             if px == "__none__":
-                px_txt = "tanpa proxy"
+                px_txt = "no proxy"
             elif isinstance(px, int):
                 px_txt = f"{px} ({label_for(px)})"
             elif isinstance(px, str) and "://" in px:
                 px_txt = px.split("@")[-1][:32] if "@" in px else px[:32]
             else:
-                px_txt = "belum dipilih"
+                px_txt = "not picked"
             parts = [
-                f"nama {name}",
+                f"name {name}",
                 f"proxy {px_txt}",
                 f"core {ans.get('cores') or 'auto'}",
                 f"ram {ans.get('mem') or 'auto'}",
-                f"layar {ans.get('screen') or 'auto'}",
+                f"screen {ans.get('screen') or 'auto'}",
                 f"gpu {ans.get('gpu') or 'auto'}",
             ]
             m = ans.get("model")
             if m not in (None, "auto", "random"):
                 parts.append(f"model {short_gpu(m)}")
             elif m == "random":
-                parts.append("model acak")
+                parts.append("model random")
             return "  " + " · ".join(parts)
 
         def summary_text():
             px = ans.get("proxy")
             if px == "__none__":
-                px_s = "tanpa proxy"
+                px_s = "no proxy"
             elif isinstance(px, str) and "://" in px:
                 px_s = px.split("@")[-1] if "@" in px else px
             elif isinstance(px, int):
@@ -1774,13 +1786,13 @@ def act_new(args):
             else:
                 px_s = str(px)
             return [
-                f"nama    : {name}",
+                f"name    : {name}",
                 f"proxy   : {px_s}",
                 f"cpu/ram : {ans.get('cores') or 'auto'} / {ans.get('mem') or 'auto'} GB",
-                f"layar   : {ans.get('screen') or 'auto (dari seed)'}",
+                f"screen  : {ans.get('screen') or 'auto (from seed)'}",
                 f"gpu     : {ans.get('gpu') or 'auto'}" +
                 (f" · {short_gpu(ans.get('model'))}" if ans.get('model') not in (None, 'auto', 'random') else
-                 " · acak" if ans.get('model') == 'random' else ""),
+                 " · random" if ans.get('model') == 'random' else ""),
             ]
 
         i = 0
@@ -1790,7 +1802,7 @@ def act_new(args):
         # langkah yang WAJIB dikunjungi lagi setelah sebuah langkah diubah
         DEPS = {"gpu": ["model"]}
         jump_deps = []
-        while True:   # ulang balik ke langkah tertentu dari layar konfirmasi
+        while True:   # loop back to a specific step from the confirm screen
           while i < len(steps):
               st = steps[i]
               if st != "model":
@@ -1799,25 +1811,25 @@ def act_new(args):
                   print()
 
               if st == "proxy":
-                  v = ask(f"Proxy buat '{name}':", proxy_choices(include_add=True), ans.get("proxy"), allow_back=False)
+                  v = ask(f"Proxy for '{name}':", proxy_choices(include_add=True), ans.get("proxy"), allow_back=False)
                   if v == "__add__":
                       act_addproxy([])
                       continue
               elif st == "cores":
                   v = ask("CPU core:",
-                          [("auto (dari seed)", None)] + [(x, x) for x in CORE_CHOICES],
+                          [("auto (from seed)", None)] + [(x, x) for x in CORE_CHOICES],
                           ans.get("cores"), allow_finish=ready_to_finish())
               elif st == "mem":
                   v = ask("RAM (GB):",
-                          [("auto (dari seed)", None)] + [(x, x) for x in MEM_CHOICES],
+                          [("auto (from seed)", None)] + [(x, x) for x in MEM_CHOICES],
                           ans.get("mem"), allow_finish=ready_to_finish())
               elif st == "screen":
-                  v = ask(f"Resolusi layar (monitor lo: {REAL_SCREEN}):",
-                          [("auto (dari seed)", None)] + [(x, x) for x in SCREEN_CHOICES],
+                  v = ask(f"Screen resolution (your monitor: {REAL_SCREEN}):",
+                          [("auto (from seed)", None)] + [(x, x) for x in SCREEN_CHOICES],
                           ans.get("screen", REAL_SCREEN), allow_finish=ready_to_finish())
               elif st == "gpu":
                   v = ask("GPU vendor:",
-                          [("auto (dari seed)", None)] + [(x, x) for x in GPU_CHOICES],
+                          [("auto (from seed)", None)] + [(x, x) for x in GPU_CHOICES],
                           ans.get("gpu"), allow_finish=ready_to_finish())
               else:
                   vendor = ans.get("gpu")
@@ -1831,9 +1843,9 @@ def act_new(args):
                   v = None
                   while True:
                       pick = ask(f"GPU {vendor} → 🎲 {short_gpu(cand)}",
-                                 [("✓ pakai model ini", "use"),
-                                  ("🎲 new fingerprint (acak lagi)", "reroll"),
-                                  ("pilih manual dari katalog…", "manual")],
+                                 [("✓ use this model", "use"),
+                                  ("🎲 new fingerprint (reroll)", "reroll"),
+                                  ("pick manually from catalog…", "manual")],
                                  None, allow_back=True, allow_finish=ready_to_finish())
                       if pick is None or pick is BACK:
                           v = BACK
@@ -1870,17 +1882,17 @@ def act_new(args):
                           break
 
               if v is None:
-                  print(c("  dibatalkan", C.Y))
+                  print(c("  cancelled", C.Y))
                   cancelled = True
                   break
               if v is FINISH:
                   break
               if v is BACK:
                   if i == 0:
-                      print(c("  dibatalkan", C.Y))
+                      print(c("  cancelled", C.Y))
                       cancelled = True
                       break
-                  editing = True   # jawaban TETAP disimpan, cuma mundur
+                  editing = True   # answers ARE kept, just go back
                   i -= 1
                   continue
               ans[st] = v
@@ -1899,7 +1911,7 @@ def act_new(args):
                       nxt = jump_deps.pop(0)
                       i = steps.index(nxt)
                       continue
-                  # lompat ke langkah pertama yang belum keisi, atau ke ringkasan
+                  # jump to the first unanswered step, or to the summary
                   i = next((j for j, nm in enumerate(steps) if nm not in ans), len(steps))
                   continue
               i += 1
@@ -1920,8 +1932,8 @@ def act_new(args):
               print("   " + line)
           print()
           labels = {"proxy": "proxy", "cores": "CPU core", "mem": "RAM",
-                    "screen": "layar", "gpu": "GPU vendor", "model": "model GPU"}
-          choices = [questionary.Choice("✓ ya, buat sekarang", "yes")]
+                    "screen": "screen", "gpu": "GPU vendor", "model": "GPU model"}
+          choices = [questionary.Choice("✓ yes, create now", "yes")]
           for nm in steps:
               if nm in ans:
                   val = ans[nm]
@@ -1935,7 +1947,7 @@ def act_new(args):
                                                     "@" + nm))
           choices.append(questionary.Choice("✗ batal", "no"))
 
-          conf = _ask(questionary.select("Buat profil dengan setelan ini?", choices=choices, default=None))
+          conf = _ask(questionary.select("Create the profile with these settings?", choices=choices, default=None))
           if conf == "yes":
               break
           if isinstance(conf, str) and conf.startswith("@"):
@@ -1943,9 +1955,9 @@ def act_new(args):
               i = steps.index(target)
               editing = True
               jump_deps = list(DEPS.get(target, []))
-              print(c(f"  → balik ke {labels[target]} (yang lain tetap kesimpan)", C.D))
+              print(c(f"  → back to {labels[target]} (the rest stays saved)", C.D))
               continue
-          print(c("  dibatalkan", C.Y))
+          print(c("  cancelled", C.Y))
           return
 
     for k, v in (("cores", cores), ("mem", mem), ("screen", screen), ("gpu", gpu)):
@@ -1973,86 +1985,86 @@ def act_new(args):
     _WIZ_DEFAULTS.pop(name, None)
 
     print()
-    print(f"  {c('✓ profil dibuat', C.G)}  {c(name, C.CY)}")
+    print(f"  {c('✓ profile created', C.G)}  {c(name, C.CY)}")
     print(f"  folder   : {prof}")
-    print(f"  proxy    : {meta['proxy'] or 'tanpa proxy (IP asli)'}")
-    print(f"  hardware : {_hw_text(meta)}   (yang kosong ikut seed)")
-    print(f"  bahasa   : {meta['locale']}   timezone: otomatis (ikut proxy)")
-    print(c("  seed/identitas dibuat saat pertama dibuka", C.D))
+    print(f"  proxy    : {meta['proxy'] or 'no proxy (real IP)'}")
+    print(f"  hardware : {_hw_text(meta)}   (empty fields follow the seed)")
+    print(f"  locale   : {meta['locale']}   timezone: auto (follows proxy)")
+    print(c("  seed/identity is created on first launch", C.D))
     print()
-    print(f"  buka : {c('/run ' + name, C.CY)}   atau {c('clk ' + name, C.CY)}")
+    print(f"  open : {c('/run ' + name, C.CY)}   or {c('clk ' + name, C.CY)}")
 
-    if interactive and _ask_confirm("  Buka sekarang?"):
+    if interactive and _ask_confirm("  Open now?"):
         launch_raw(name)
 
 
 def act_info(args):
-    name = args[0] if args else _pick_name("Info profil mana?")
+    name = args[0] if args else _pick_name("Info for which profile?")
     if not name:
         return
     p = PROFILES / name
     if not p.exists():
-        print(c(f"  profil '{name}' belum ada", C.RE))
+        print(c(f"  profile '{name}' does not exist", C.RE))
         return
     m = saved(p)
     print(f"""
-  nama     : {c(name, C.CY)}
+  name     : {c(name, C.CY)}
   folder   : {p}
   seed     : {seed_of(p)}
   platform : {m.get('platform', 'windows')}
-  engine   : {m.get('engine', '(belum dipatok)')}
-  bahasa   : {m.get('locale', DEFAULT_LOCALE)}
-  timezone : {m.get('timezone') or 'otomatis (ikut proxy)'}
+  engine   : {m.get('engine', '(not pinned)')}
+  locale   : {m.get('locale', DEFAULT_LOCALE)}
+  timezone : {m.get('timezone') or 'auto (follows proxy)'}
   noise    : {'on' if m.get('noise', True) else 'OFF (canvas identik)'}
   noise.js : rects {'on' if m.get('noise_rects', False) else 'off'} · audio {'on' if m.get('noise_audio', True) else 'off'}
-  tema     : {m.get('scheme') or DEFAULT_SCHEME}
+  scheme   : {m.get('scheme') or DEFAULT_SCHEME}
   hw manual: {_hw_text(m)}
   gpu model: {short_gpu((m.get('hw') or {}).get('gpu_renderer'))}
   proxy    : {m.get('proxy', '-')}
   url      : {m.get('url', DEFAULT_URL)}
   dibuat   : {m.get('created', '-')}
-  terakhir : {m.get('last_run', '-')}
-  ukuran   : {psize(p):.1f} MB""")
+  last run : {m.get('last_run', '-')}
+  size     : {psize(p):.1f} MB""")
 
 
 def act_newseed(args):
-    name = args[0] if args else _pick_name("Rotasi identitas profil mana?")
+    name = args[0] if args else _pick_name("Rotate identity of which profile?")
     if not name:
         return
     p = PROFILES / name
     if not p.exists():
-        print(c(f"  profil '{name}' belum ada", C.RE))
+        print(c(f"  profile '{name}' does not exist", C.RE))
         return
-    if not _ask_confirm(f"Rotasi seed {name}? Identitas jadi baru (cookie tetap)."):
+    if not _ask_confirm(f"Rotate seed {name}? New identity (cookies kept)."):
         return
     for f in p.glob(f"{SEED_FILE}*"):
         f.unlink()
-    print(c(f"  ✓ seed {name} dihapus — run berikutnya dapat identitas baru", C.G))
+    print(c(f"  ✓ seed {name} removed — next run gets a new identity", C.G))
 
 
 def act_rm(args):
-    name = args[0] if args else _pick_name("Hapus profil mana?")
+    name = args[0] if args else _pick_name("Delete which profile?")
     if not name:
         return
     p = PROFILES / name
     if not p.exists():
-        print(c(f"  profil '{name}' belum ada", C.RE))
+        print(c(f"  profile '{name}' does not exist", C.RE))
         return
-    if not _ask_confirm(f"Hapus '{name}' ({psize(p):.0f} MB) permanen?"):
+    if not _ask_confirm(f"Delete '{name}' ({psize(p):.0f} MB) permanently?"):
         return
     shutil.rmtree(p)
-    print(c(f"  ✓ '{name}' dihapus", C.G))
+    print(c(f"  ✓ '{name}' deleted", C.G))
 
 
 def act_proxy(args):
-    name = args[0] if args else _pick_name("Set proxy profil mana?")
+    name = args[0] if args else _pick_name("Set proxy for which profile?")
     if not name:
         return
     p = PROFILES / name
     if not p.exists():
-        print(c(f"  profil '{name}' belum ada", C.RE))
+        print(c(f"  profile '{name}' does not exist", C.RE))
         return
-    proxy = _pick_proxy(f"Proxy buat '{name}':")
+    proxy = _pick_proxy(f"Proxy for '{name}':")
     if proxy is None:
         return
     m = saved(p)
@@ -2069,7 +2081,7 @@ def act_proxy(args):
         m["proxy"] = proxy
         m.pop("proxy_label", None)
     store(p, m)
-    shown = m["proxy"] or "tanpa proxy"
+    shown = m["proxy"] or "no proxy"
     if "@" in shown:
         scheme, _, rest = shown.partition("://")
         shown = f"{scheme}://{rest.split('@', 1)[-1]}"
@@ -2077,17 +2089,17 @@ def act_proxy(args):
 
 
 def act_noise(args):
-    """Atur noise per profil: /noise <profil> [rects|audio] on|off"""
+    """Per-profile noise: /noise <profile> [rects|audio] on|off"""
     words = [a for a in args if a not in ("on", "off")]
     what = "audio"
     if any(w in ("rects", "svg", "audio") for w in words):
         what = next(w for w in words if w in ("rects", "svg", "audio"))
-    name = next((a for a in words if a not in ("rects", "svg", "audio")), None) or _pick_name("Profil mana?")
+    name = next((a for a in words if a not in ("rects", "svg", "audio")), None) or _pick_name("Which profile?")
     if not name:
         return
     prof = PROFILES / name
     if not prof.exists():
-        print(c(f"  profil '{name}' belum ada", C.RE))
+        print(c(f"  profile '{name}' does not exist", C.RE))
         return
     key = "noise_rects" if what in ("rects", "svg") else "noise_audio"
     m = saved(prof)
@@ -2098,48 +2110,48 @@ def act_noise(args):
     label = "rects+SVG" if key == "noise_rects" else "audio"
     print(c(f"  ✓ {name}: noise {label} {'ON' if want else 'OFF'}", C.G))
     if key == "noise_rects" and want:
-        print(c("  ⚠ rects ON = fungsi non-native → Cloudflare/Turnstile bisa nolak", C.Y))
+        print(c("  ⚠ rects ON = non-native functions → Cloudflare/Turnstile may reject", C.Y))
     print(c(f"  sekarang: rects={'on' if m.get('noise_rects', False) else 'off'}"
             f" · audio={'on' if m.get('noise_audio', True) else 'off'}", C.D))
 
 
 def act_newfp(args):
-    """Re-roll model GPU (seperti tombol NEW FINGERPRINT di Dolphin)."""
-    name = next((a for a in args if not a.startswith("-")), None) or _pick_name("Profil mana yang mau di-roll ulang GPU-nya?")
+    """Reroll GPU model (like Dolphin's NEW FINGERPRINT button)."""
+    name = next((a for a in args if not a.startswith("-")), None) or _pick_name("Which profile to reroll GPU?")
     if not name:
         return
     prof = PROFILES / name
     if not prof.exists():
-        print(c(f"  profil '{name}' belum ada", C.RE))
+        print(c(f"  profile '{name}' does not exist", C.RE))
         return
     m = saved(prof)
     hw = dict(m.get("hw") or {})
     vendor = hw.get("gpu")
     new_r = random_gpu_renderer(vendor)
     if not new_r:
-        print(c("  katalog GPU kosong", C.RE))
+        print(c("  GPU catalog is empty", C.RE))
         return
     old_r = hw.get("gpu_renderer")
     hw["gpu_renderer"] = new_r
     m["hw"] = hw
     store(prof, m)
     print(f"  {c('✓ GPU di-roll ulang', C.G)}  {c(name, C.CY)}")
-    print(f"  sebelum : {short_gpu(old_r) if old_r else 'auto (ikut seed)'}")
+    print(f"  before  : {short_gpu(old_r) if old_r else 'auto (from seed)'}")
     print(f"  sekarang: {c(short_gpu(new_r), C.B)}")
     warn = coherence_warning(m)
     if warn:
         print(c(f"  ⚠ {warn}", C.Y))
-    print(c("  (canvas/audio tetap, identitas lain tetap. /newseed buat ganti total)", C.D))
+    print(c("  (canvas/audio and other identity stay. /newseed to rotate everything)", C.D))
 
 
 def act_set(args):
-    """Atur hardware manual per profil (ala Dolphin: CPU, RAM, layar, GPU)."""
-    name = next((a for a in args if not a.startswith("-")), None) or _pick_name("Atur hardware profil mana?")
+    """Manual hardware per profile (Dolphin-style: CPU, RAM, screen, GPU)."""
+    name = next((a for a in args if not a.startswith("-")), None) or _pick_name("Set hardware for which profile?")
     if not name:
         return
     prof = PROFILES / name
     if not prof.exists():
-        print(c(f"  profil '{name}' belum ada", C.RE))
+        print(c(f"  profile '{name}' does not exist", C.RE))
         return
     m = saved(prof)
     hw = dict(m.get("hw") or {})
@@ -2147,11 +2159,11 @@ def act_set(args):
     try:
         import questionary
     except Exception:
-        print(c("  questionary nggak ada", C.RE))
+        print(c("  questionary is not installed", C.RE))
         return
 
     def pick(title, choices, cur):
-        opts = [questionary.Choice("auto (dari seed)", None)] + \
+        opts = [questionary.Choice("auto (from seed)", None)] + \
                [questionary.Choice(x, x) for x in choices]
         idx = 0
         if cur in choices:
@@ -2162,7 +2174,7 @@ def act_set(args):
     if cores is None and hw.get("cores"):
         pass
     mem = pick("RAM (GB):", MEM_CHOICES, hw.get("mem"))
-    screen = pick("Resolusi layar:", SCREEN_CHOICES, hw.get("screen"))
+    screen = pick("Screen resolution:", SCREEN_CHOICES, hw.get("screen"))
     gpu = pick("GPU vendor:", GPU_CHOICES, hw.get("gpu"))
 
     new_hw = {}
@@ -2173,9 +2185,9 @@ def act_set(args):
     store(prof, m)
 
     print()
-    print(f"  {c('✓ hardware diset', C.G)}  {c(name, C.CY)}")
+    print(f"  {c('✓ hardware set', C.G)}  {c(name, C.CY)}")
     print(f"  {_hw_text(m)}")
-    print(c("  (yang lain tetap diturunkan dari seed)", C.D))
+    print(c("  (the rest is still derived from the seed)", C.D))
 
 
 def act_doctor(_args=None):
@@ -2186,14 +2198,14 @@ def act_doctor(_args=None):
 
 
 def ensure_license_hint():
-    """Print peringatan kalau belum ada license key (tidak memblokir TUI)."""
+    """Print a warning when there is no license key (does not block the TUI)."""
     kf = HOME / ".cloakbrowser" / "license.key"
     if kf.exists() or os.environ.get("CLOAKBROWSER_LICENSE_KEY"):
         return
-    print(c("  ⚠ belum ada license key CloakBrowser.", C.Y))
-    print(c("    gratis (1 sesi konkuren):  cloakbrowser login", C.D))
-    print(c("    atau:  CLOAKBROWSER_LICENSE_KEY=cb_... clk <profil>", C.D))
-    print(c("    tanpa key, launch browser bakal gagal.", C.D))
+    print(c("  ⚠ no CloakBrowser license key yet.", C.Y))
+    print(c("    free (1 concurrent session):  cloakbrowser login", C.D))
+    print(c("    or:  CLOAKBROWSER_LICENSE_KEY=cb_... clk <profile>", C.D))
+    print(c("    without a key, browser launch will fail.", C.D))
     print()
 
 
@@ -2232,11 +2244,11 @@ def interactive():
 {c('  ╭────────────────────────────────────────────╮', C.CY)}
 {c('  │', C.CY)}  {c('CloakBrowser Manager', C.B)}   {c('· clk', C.D)}              {c('│', C.CY)}
 {c('  ╰────────────────────────────────────────────╯', C.CY)}
-  {c('/new', C.CY)} profil baru  {c('/run', C.CY)} buka     {c('/list', C.CY)} daftar
-  {c('/proxy', C.CY)} set proxy  {c('/proxies', C.CY)} cek pool  {c('/info', C.CY)} identitas
-  {c('/addproxy', C.CY)} proxy belian  {c('/newseed', C.CY)} rotasi   {c('/rm', C.CY)} hapus
-  {c('/doctor', C.CY)} diagnosa   {c('/status', C.CY)} seat/disk
-  {c('/help', C.CY)} bantuan
+  {c('/new', C.CY)} new profile   {c('/run', C.CY)} open     {c('/list', C.CY)} list
+  {c('/proxy', C.CY)} set proxy  {c('/proxies', C.CY)} pool     {c('/info', C.CY)} identity
+  {c('/addproxy', C.CY)} purchased  {c('/newseed', C.CY)} rotate   {c('/rm', C.CY)} delete
+  {c('/doctor', C.CY)} doctor     {c('/status', C.CY)} seat/disk
+  {c('/help', C.CY)} help
   {c('tab', C.D)}=autocomplete   {c('↑↓', C.D)}=history
 """)
     dispatch = {
@@ -2246,7 +2258,7 @@ def interactive():
         "/info": act_info, "/newseed": act_newseed, "/rm": act_rm,
         "/doctor": act_doctor, "/set": act_set, "/newfp": act_newfp,
         "/status": lambda a: cmd_status(), "/fixlocks": lambda a: cmd_fixlocks(),
-        "/raw": lambda a: launch_raw(a[0] if a else _pick_name("Profil mana (raw mode)?"),),
+        "/raw": lambda a: launch_raw(a[0] if a else _pick_name("Which profile (raw mode)?"),),
         "/addproxy": act_addproxy, "/rmproxy": act_rmproxy, "/testproxy": act_testproxy,
         "/help": lambda a: show_help(),
     }
@@ -2263,7 +2275,7 @@ def interactive():
         bits = line.split()
         cmd, args = bits[0], bits[1:]
         if not cmd.startswith("/"):
-            # `clk> acc1` = jalankan profil
+            # `clk> acc1` = launch profile
             cmd, args = "/run", bits
         fn = dispatch.get(cmd)
         if not fn and cmd.startswith("/"):
@@ -2283,14 +2295,14 @@ def interactive():
         try:
             fn(args)
         except (KeyboardInterrupt, EOFError):
-            print(c("  dibatalkan", C.D))
+            print(c("  cancelled", C.D))
         except Exception as e:
             print(c(f"  error: {type(e).__name__}: {e}", C.RE))
 
 
 # ---------------- CLI ----------------
 def main():
-    # Subcommand sebelum argparse: `clk new <nama> [--port N|--noproxy]`
+    # Subcommands before argparse: `clk new <name> [--port N|--noproxy]`
     if len(sys.argv) > 1 and sys.argv[1] == "new":
         return act_new(sys.argv[2:])
     if len(sys.argv) > 1 and sys.argv[1] == "set":
@@ -2303,7 +2315,7 @@ def main():
         return cmd_fixlocks()
     if len(sys.argv) > 1 and sys.argv[1] == "search-sync":
         if len(sys.argv) < 3:
-            sys.exit("  pakai: clk search-sync <profil-master>")
+            sys.exit("  usage: clk search-sync <master-profile>")
         return sync_search_from(sys.argv[2], sys.argv[3:] or None)
     if len(sys.argv) > 1 and sys.argv[1] == "addproxy":
         return act_addproxy(sys.argv[2:])
@@ -2312,19 +2324,19 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "testproxy":
         return act_testproxy(sys.argv[2:])
     if len(sys.argv) > 1 and sys.argv[1] == "login":
-        # wrapper cloakbrowser login (free key by email, atau paste key)
+        # cloakbrowser login wrapper (free key by email, or paste a key)
         exe = VAULT / "venv" / "bin" / "cloakbrowser"
         if exe.exists():
             os.execv(str(exe), ["cloakbrowser", "login", *sys.argv[2:]])
         os.execv(sys.executable, [sys.executable, "-m", "cloakbrowser", "login", *sys.argv[2:]])
 
-    ap = argparse.ArgumentParser(prog="clk", description="CloakBrowser manager",
+    ap = argparse.ArgumentParser(prog="clk", description="CloakBrowser Manager",
                                 epilog=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("profile", nargs="?", help="nama profil (kosong = TUI)")
+    ap.add_argument("profile", nargs="?", help="profile name (empty = TUI)")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--show", action="store_true")
     ap.add_argument("--doctor", action="store_true")
-    ap.add_argument("--tui", action="store_true", help="paksa mode interaktif")
+    ap.add_argument("--tui", action="store_true", help="force interactive mode")
     ap.add_argument("--port", type=int, default=0)
     ap.add_argument("--proxy", default=None)
     ap.add_argument("--proxy-file", default=None)
@@ -2334,28 +2346,28 @@ def main():
     ap.add_argument("--platform", default=None, choices=["windows", "macos"])
     ap.add_argument("--gpu", default=None, choices=["NVIDIA", "Intel"])
     ap.add_argument("--scheme", default=None, choices=SCHEME_CHOICES,
-                    help="tema: dark (default), light, no-preference")
+                    help="scheme: dark (default), light, no-preference")
     ap.add_argument("--search", default=None, choices=list(SEARCH_ENGINES),
                     help="search engine default (default: google)")
-    ap.add_argument("--gpu-model", default=None, help="pilih model GPU (substring, mis. 'RTX 3080' / 'UHD 630')")
-    ap.add_argument("--gpu-random", action="store_true", help="acak model GPU (vendor tetap)")
+    ap.add_argument("--gpu-model", default=None, help="pick GPU model (substring, e.g. 'RTX 3080' / 'UHD 630')")
+    ap.add_argument("--gpu-random", action="store_true", help="randomize GPU model (vendor kept)")
     ap.add_argument("--cores", default=None, help="paksa jumlah core (2/4/6/8/12/16)")
     ap.add_argument("--mem", default=None, help="paksa RAM GB (4/8/16)")
     ap.add_argument("--screen", default=None)
     ap.add_argument("--new", action="store_true")
     ap.add_argument("--bg", action="store_true")
-    ap.add_argument("--raw", action="store_true", help="(default) tanpa Playwright/CDP")
+    ap.add_argument("--raw", action="store_true", help="(default) no Playwright/CDP")
     ap.add_argument("--cdp", action="store_true",
-                    help="pakai Playwright/CDP (buat cek fingerprint otomatis)")
+                    help="use Playwright/CDP (to measure fingerprint automatically)")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--detach", action="store_true", help=argparse.SUPPRESS)
-    ap.add_argument("--locale", default=None, help="bahasa, mis. en-US (default, sama kayak Dolphin)")
+    ap.add_argument("--locale", default=None, help="locale, e.g. en-US (default)")
     ap.add_argument("--noise-rects", default=None, choices=["on", "off"],
-                    help="noise ClientRects + Audio via shim JS (default on)")
+                    help="ClientRects + Audio noise via JS shim (default on)")
     ap.add_argument("--noise", default=None, choices=["on", "off"],
-                    help="noise canvas/webgl/audio (default on; off = canvas identik antar profil)")
-    ap.add_argument("--tz", default=None, help="paksa timezone, mis. Asia/Singapore (default: ikut proxy)")
-    ap.add_argument("--engine", default=None, help="paksa versi binary Chromium (mis. 155.0.8059.39.1)")
+                    help="canvas/webgl/audio noise (default on; off = identical canvas across profiles)")
+    ap.add_argument("--tz", default=None, help="force timezone, e.g. Asia/Singapore (default: follow proxy)")
+    ap.add_argument("--engine", default=None, help="force Chromium binary version (e.g. 155.0.8059.39.1)")
     a = ap.parse_args()
 
     if a.list:
@@ -2369,7 +2381,7 @@ def main():
     if a.show:
         return act_info([a.profile])
     if a.profile and not a.cdp:
-        if a.noise_rects is not None:      # simpan dulu, raw mode baca dari meta
+        if a.noise_rects is not None:      # save first; raw mode reads from meta
             _p = PROFILES / a.profile
             _m = saved(_p)
             _m["noise_rects"] = (a.noise_rects == "on")
@@ -2396,7 +2408,7 @@ def main():
     elif gpu_model:
         resolved = resolve_gpu_model(gpu_model, a.gpu)
         if not resolved:
-            sys.exit(f"  model GPU '{gpu_model}' nggak ada di katalog")
+            sys.exit(f"  GPU model '{gpu_model}' not in the catalog")
         gpu_model = resolved
 
     launch_profile(a.profile, port=a.port or None, proxy=proxy, url=a.url,

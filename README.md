@@ -8,9 +8,6 @@ This is the CloakBrowser sibling of [`cfm-cli`](https://github.com/zidanefaqih/c
 (Camoufox/Gecko). Use `clk` when you need a Chromium engine (Turnstile, Cloudflare,
 Kilo, sites that treat Firefox as second-class).
 
-> TUI prompts are in Indonesian (bahasa Indonesia). Commands, flags and this
-> README are in English.
-
 ## What you get
 
 - **1 profile = 1 permanent seed** → canvas / WebGL renderer / audio / hardware
@@ -67,8 +64,53 @@ what is missing.
 
 ### Windows 10/11
 
-Not documented yet. The wrapper and Chromium Pro do have Windows builds; the
-TUI helpers (`xrandr`, `xdotool`, fontconfig isolation) are Linux-only.
+**Not tested on this project yet** (same caveat as early `cfm-cli`). The
+CloakBrowser wrapper and Chromium Pro **do** ship Windows builds, so it should
+work for the core path (create profile → launch → login). Install Git, Python
+3.10+, and `curl.exe` first. In PowerShell:
+
+```powershell
+git clone https://github.com/zidanefaqih/clk-cli.git
+cd clk-cli
+
+py -3.12 -m venv "$HOME\.clk-venv"
+$python = "$HOME\.clk-venv\Scripts\python.exe"
+& $python -m pip install -U pip
+& $python -m pip install "cloakbrowser[geoip]" prompt_toolkit questionary
+
+# login (free key by email, or paste cb_...)
+& $python -m cloakbrowser login
+
+# run from the clone
+& $python .\bin\clk
+
+# or put it on PATH
+mkdir -Force "$env:USERPROFILE\.local\bin" | Out-Null
+copy-item .\bin\clk "$env:USERPROFILE\.local\bin\clk"
+# then edit the first line of that file to:
+#   #!C:\Users\<you>\.clk-venv\Scripts\python.exe
+# and add that folder to PATH
+```
+
+Use `py -3.10` / `py -3.11` if `py -3.12` is unavailable.
+
+**Linux-only helpers (no-op or skipped on Windows):**
+
+- Local WireGuard → SOCKS5 pool (`~/surfshark-proxy`, `ss-up`/`ss-down`, systemd)
+  — use `--proxy` / `/addproxy` with a **remote** proxy instead, or `--noproxy`.
+- fontconfig isolation (`~/.cloak/fonts.conf`) — Chromium on Windows uses DirectWrite.
+- `xdotool` window focus, `xrandr` screen detection (falls back to `1920x1080`;
+  set `--screen 1920x1080` or `/set` if you want another value).
+- `/proc` scan for running browsers — seat count still works via the license
+  server (`clk --doctor`).
+- `start_new_session` for `--bg` — handled with `DETACHED_PROCESS`.
+
+Profiles live under your user folder (`~/cloak-profiles` →
+`C:\Users\<you>\cloak-profiles`). Purchased proxies go in
+`~/.cloak/proxies.json` the same way.
+
+If you hit a Windows-only crash, open an issue with the traceback. PRs that
+make the Linux path worse will be rejected.
 
 ## Login / license (read this if `clk` refuses to launch)
 
