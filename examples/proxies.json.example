@@ -1,0 +1,18 @@
+{
+  "_comment": "Copy to ~/.cloak/proxies.json (chmod 600). NEVER commit the real file.",
+  "_formats": [
+    "http://user:pass@host:port",
+    "socks5://user:pass@host:port",
+    "host:port:user:pass   (Webshare dashboard)"
+  ],
+  "webshare-uk-1": {
+    "url": "http://myuser:mypass@203.0.113.10:6014",
+    "desc": "Webshare London UK (example)",
+    "added": "2026-11-10 14:00",
+    "scheme": "http",
+    "host": "203.0.113.10",
+    "port": 6014,
+    "exit_ip": null,
+    "country": "GB"
+  }
+}

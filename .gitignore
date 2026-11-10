@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# local data — never commit
+cloak-profiles/
+proxies.json
+*.key
+license.key
+logs/
+*.log
+ext/
+fontcache/
+winfonts/
+.font_warning_shown
+.install_id
+.last_*
+
+# editors
+.idea/
+.vscode/
+*.swp

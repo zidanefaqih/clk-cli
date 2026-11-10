@@ -1,0 +1,35 @@
+{
+  "_note": "Kartu lama / low-end yang TIDAK ada di pool engine CloakBrowser. String ANGLE format Windows. device ID best-effort untuk kartu lama; yang penting nama + pola string-nya valid.",
+  "NVIDIA": [
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GT 710 (0x0000128B) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GT 730 (0x00000F02) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GT 1030 (0x00001D01) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 750 Ti (0x00001380) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 950 (0x00001402) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 960 (0x00001401) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 970 (0x000013C2) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1050 (0x00001C81) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1050 Ti (0x00001C82) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 3GB (0x00001C02) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 6GB (0x00001C03) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1070 (0x00001B81) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce 920MX (0x0000134F) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce 940MX (0x0000134D) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 950M (0x0000139A) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 960M (0x0000139B) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1050 Ti (0x00001C8C) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce MX150 (0x00001D10) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce MX250 (0x00001D13) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce MX350 (0x00001C94) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (NVIDIA, NVIDIA GeForce MX450 (0x00001F97) Direct3D11 vs_5_0 ps_5_0, D3D11)" }
+  ],
+  "Intel": [
+    { "tier": "laptop",  "renderer": "ANGLE (Intel, Intel(R) HD Graphics 4000 (0x00000166) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (Intel, Intel(R) HD Graphics 4600 (0x00000412) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (Intel, Intel(R) HD Graphics 520 (0x00001916) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (Intel, Intel(R) HD Graphics 530 (0x00001912) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (Intel, Intel(R) HD Graphics 620 (0x00005916) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "laptop",  "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 605 (0x00003185) Direct3D11 vs_5_0 ps_5_0, D3D11)" },
+    { "tier": "desktop", "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 610 (0x00003EA1) Direct3D11 vs_5_0 ps_5_0, D3D11)" }
+  ]
+}
