@@ -4,9 +4,25 @@ Terminal UI + CLI for managing many **CloakBrowser** (stealth Chromium) profiles
 Each profile keeps a persistent fingerprint, its own proxy, and its own cookies —
 so one machine can look like many different Windows/Mac devices.
 
+**This repo does not ship CloakBrowser.** `clk` is the manager; you install the
+`cloakbrowser` pip package and a license key yourself (free plan is enough).
+See [clk is a manager, not the browser](#clk-is-a-manager-not-the-browser).
+
 This is the CloakBrowser sibling of [`cfm-cli`](https://github.com/zidanefaqih/cfm-cli)
 (Camoufox/Gecko). Use `clk` when you need a Chromium engine (Turnstile, Cloudflare,
 Kilo, sites that treat Firefox as second-class).
+
+## clk is a manager, not the browser
+
+`clk` is **only** the TUI/CLI. It does **not** include CloakBrowser. You still need to:
+
+1. `pip install "cloakbrowser[geoip]"` — the official wrapper from CloakHQ
+2. `cloakbrowser login` — free key is enough (1 concurrent session)
+3. First launch downloads the Pro Chromium binary (~600 MB) to `~/.cloakbrowser/`
+
+Without those, `clk` opens, `/new` works, but `/run` fails. That is expected.
+CloakBrowser itself is [CloakHQ/CloakBrowser](https://github.com/CloakHQ/CloakBrowser)
+— different project, different license, different account system.
 
 ## What you get
 
